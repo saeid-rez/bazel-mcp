@@ -1,0 +1,30 @@
+[project]
+name = "bazel-mcp"
+version = "0.1.0"
+description = "MCP server for Bazel: query targets, analyze deps, build, test, and read BUILD files"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "mcp[cli]>=1.27.1",
+    "pydantic-settings>=2.0",
+]
+
+[project.scripts]
+bazel-mcp = "main:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["bazel_mcp"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.24",
+]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
