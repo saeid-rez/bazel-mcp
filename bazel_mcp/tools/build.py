@@ -5,6 +5,9 @@ from bazel_mcp.server import mcp
 
 _BUILD_TEST = {
     "readOnlyHint": False,
+    "destructiveHint": False,
+    "idempotentHint": False,
+    "openWorldHint": True,
 }
 
 

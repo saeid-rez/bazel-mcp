@@ -8,6 +8,9 @@ from bazel_mcp.server import mcp
 
 _READ_ONLY = {
     "readOnlyHint": True,
+    "destructiveHint": False,
+    "idempotentHint": True,
+    "openWorldHint": False,
 }
 
 
