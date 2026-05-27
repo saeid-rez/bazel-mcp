@@ -10,7 +10,7 @@ dependencies = [
 ]
 
 [project.scripts]
-bazel-mcp = "main:main"
+bazel-mcp = "bazel_mcp.cli:main"
 
 [build-system]
 requires = ["hatchling"]

@@ -1,4 +1,4 @@
-"""Local development shim for the Bazel MCP server."""
+"""Run the Bazel MCP server with `python -m bazel_mcp`."""
 
 from bazel_mcp.cli import main
 

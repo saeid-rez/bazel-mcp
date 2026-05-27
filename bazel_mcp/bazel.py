@@ -20,7 +20,7 @@ WORKSPACE_MARKERS = ("WORKSPACE", "WORKSPACE.bazel", "MODULE.bazel")
 
 _BUILD_TEST_LOCK = asyncio.Lock()
 
-_TARGET_PATTERN = re.compile(r"^(@[\w\-]+)?//[\w\-./]+:[\w\-./]+$|^(@[\w\-]+)?//[\w\-./]+/\.{3}$|^//\.{3}$")
+_TARGET_PATTERN = re.compile(r"^(//|@[\w.-]+//)\S+$")
 
 
 @dataclass
@@ -153,7 +153,10 @@ async def run_bazel(
             )
         except asyncio.TimeoutError:
             proc.kill()
-            await proc.wait()
+            try:
+                await asyncio.wait_for(proc.communicate(), timeout=5.0)
+            except asyncio.TimeoutError:
+                pass
             raise BazelExecutionError(
                 f"Bazel command timed out after {effective_timeout}s: {' '.join(cmd)}",
                 return_code=-1,
