@@ -93,6 +93,37 @@ def resolve_bazel_binary() -> str:
         f"Bazel binary not found: {candidate!r}. Set BAZEL_MCP_BAZEL_PATH or install bazel/bazelisk."
     )
 
+
+def normalize_query_pattern(package: str) -> str:
+    """Normalize a package or target pattern for bazel query."""
+    package = package.strip()
+    if not package:
+        package = "//..."
+
+    if package.startswith("@"):
+        return package
+
+    if not package.startswith("//"):
+        package = f"//{package}"
+
+    if ":" in package or package.endswith("/...") or package == "//...":
+        return package
+
+    return f"{package}:all"
+
+
+def validate_target_label(target: str) -> None:
+    if not _TARGET_PATTERN.match(target.strip()):
+        raise ValueError(
+            f"Invalid Bazel target label: {target!r}. "
+            "Expected form like //pkg:target, //:target, //pkg/..., or @repo//pkg:target."
+        )
+
+
+def _needs_build_test_lock(args: list[str]) -> bool:
+    return bool(args) and args[0] in ("build", "test")
+
+
 async def run_bazel(
     args: list[str],
     *,
