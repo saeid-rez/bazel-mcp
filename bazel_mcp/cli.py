@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import logging
-import os
 import sys
 
 
@@ -13,11 +12,11 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--workspace-root",
         "-w",
-        help="Bazel workspace root. Defaults to BAZEL_MCP_WORKSPACE_ROOT or auto-detection from cwd.",
+        help="Bazel workspace root. Defaults to auto-detection from cwd.",
     )
     parser.add_argument(
         "--bazel-path",
-        help="Path to bazel or bazelisk. Defaults to BAZEL_MCP_BAZEL_PATH or 'bazel'.",
+        help="Path to bazel or bazelisk. Defaults to 'bazel'.",
     )
     parser.add_argument(
         "--timeout",
@@ -52,18 +51,14 @@ def main(argv: list[str] | None = None) -> None:
     logging.getLogger("mcp.server.lowlevel.server").setLevel(logging_level)
     logging.getLogger("mcp.server.fastmcp.server").setLevel(logging_level)
 
-    if args.workspace_root:
-        os.environ["BAZEL_MCP_WORKSPACE_ROOT"] = args.workspace_root
-    if args.bazel_path:
-        os.environ["BAZEL_MCP_BAZEL_PATH"] = args.bazel_path
-    if args.timeout is not None:
-        os.environ["BAZEL_MCP_TIMEOUT"] = str(args.timeout)
-    if args.max_output_chars is not None:
-        os.environ["BAZEL_MCP_MAX_OUTPUT_CHARS"] = str(args.max_output_chars)
+    from bazel_mcp.settings import configure_settings
 
-    from bazel_mcp.settings import get_settings
-
-    get_settings.cache_clear()
+    configure_settings(
+        workspace_root=args.workspace_root,
+        bazel_path=args.bazel_path,
+        timeout=args.timeout,
+        max_output_chars=args.max_output_chars,
+    )
 
     from bazel_mcp.server import mcp
 

@@ -16,14 +16,14 @@ from bazel_mcp.bazel import (
     validate_target_label,
 )
 from bazel_mcp.exceptions import BazelExecutionError, WorkspaceNotFoundError
-from bazel_mcp.settings import get_settings
+from bazel_mcp.settings import configure_settings, reset_settings
 
 
 @pytest.fixture(autouse=True)
-def clear_settings_cache():
-    get_settings.cache_clear()
+def clear_settings():
+    reset_settings()
     yield
-    get_settings.cache_clear()
+    reset_settings()
 
 
 class TestNormalizeQueryPattern:
@@ -70,17 +70,15 @@ class TestFindWorkspaceRoot:
         sub = tmp_path / "pkg"
         sub.mkdir()
         monkeypatch.chdir(sub)
-        monkeypatch.delenv("BAZEL_MCP_WORKSPACE_ROOT", raising=False)
         assert find_workspace_root() == tmp_path.resolve()
 
-    def test_explicit_workspace_root(self, tmp_path: Path, monkeypatch):
+    def test_explicit_workspace_root(self, tmp_path: Path):
         (tmp_path / "MODULE.bazel").write_text('module(name = "test")\n')
-        monkeypatch.setenv("BAZEL_MCP_WORKSPACE_ROOT", str(tmp_path))
+        configure_settings(workspace_root=str(tmp_path))
         assert find_workspace_root() == tmp_path.resolve()
 
     def test_missing_workspace(self, tmp_path: Path, monkeypatch):
         monkeypatch.chdir(tmp_path)
-        monkeypatch.delenv("BAZEL_MCP_WORKSPACE_ROOT", raising=False)
         with pytest.raises(WorkspaceNotFoundError):
             find_workspace_root()
 
@@ -89,7 +87,7 @@ class TestFindWorkspaceRoot:
 class TestRunBazel:
     async def test_success(self, tmp_path: Path, monkeypatch):
         (tmp_path / "MODULE.bazel").write_text('module(name = "test")\n')
-        monkeypatch.setenv("BAZEL_MCP_WORKSPACE_ROOT", str(tmp_path))
+        configure_settings(workspace_root=str(tmp_path))
 
         mock_proc = AsyncMock()
         mock_proc.communicate = AsyncMock(return_value=(b"ok\n", b""))
@@ -110,7 +108,7 @@ class TestRunBazel:
 
     async def test_check_false_on_failure(self, tmp_path: Path, monkeypatch):
         (tmp_path / "MODULE.bazel").write_text('module(name = "test")\n')
-        monkeypatch.setenv("BAZEL_MCP_WORKSPACE_ROOT", str(tmp_path))
+        configure_settings(workspace_root=str(tmp_path))
 
         mock_proc = AsyncMock()
         mock_proc.communicate = AsyncMock(return_value=(b"", b"error\n"))
@@ -125,7 +123,7 @@ class TestRunBazel:
 
     async def test_raises_on_failure_when_check_true(self, tmp_path: Path, monkeypatch):
         (tmp_path / "MODULE.bazel").write_text('module(name = "test")\n')
-        monkeypatch.setenv("BAZEL_MCP_WORKSPACE_ROOT", str(tmp_path))
+        configure_settings(workspace_root=str(tmp_path))
 
         mock_proc = AsyncMock()
         mock_proc.communicate = AsyncMock(return_value=(b"", b"fail\n"))
@@ -140,7 +138,7 @@ class TestRunBazel:
 
     async def test_timeout_kills_and_drains_process(self, tmp_path: Path, monkeypatch):
         (tmp_path / "MODULE.bazel").write_text('module(name = "test")\n')
-        monkeypatch.setenv("BAZEL_MCP_WORKSPACE_ROOT", str(tmp_path))
+        configure_settings(workspace_root=str(tmp_path))
 
         call_count = 0
 

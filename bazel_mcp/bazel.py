@@ -55,7 +55,7 @@ def find_workspace_root(start: Path | None = None) -> Path:
         root = Path(settings.workspace_root).resolve()
         if not _has_workspace_marker(root):
             raise WorkspaceNotFoundError(
-                f"BAZEL_MCP_WORKSPACE_ROOT is set to {root} but no workspace marker "
+                f"Workspace root is set to {root} but no workspace marker "
                 f"({', '.join(WORKSPACE_MARKERS)}) was found.",
                 searched_paths=[str(root)],
             )
@@ -90,7 +90,7 @@ def resolve_bazel_binary() -> str:
             if found:
                 return found
     raise BazelNotFoundError(
-        f"Bazel binary not found: {candidate!r}. Set BAZEL_MCP_BAZEL_PATH or install bazel/bazelisk."
+        f"Bazel binary not found: {candidate!r}. Use --bazel-path or install bazel/bazelisk."
     )
 
 
