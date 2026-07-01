@@ -1,7 +1,8 @@
 """Bazel build and test MCP tools."""
 
 from bazel_mcp.bazel import find_workspace_root, run_bazel
-from bazel_mcp.models import BazelTestResult
+from bazel_mcp.build_parser import parse_bazel_build_output
+from bazel_mcp.models import BazelBuildResult, BazelTestResult
 from bazel_mcp.server import mcp
 from bazel_mcp.test_parser import parse_bazel_test_output
 
@@ -18,8 +19,8 @@ async def bazel_build(
     targets: list[str],
     options: list[str] | None = None,
     timeout: int | None = None,
-) -> str:
-    """Run a Bazel build and return stdout, stderr, and exit code.
+) -> BazelBuildResult:
+    """Run a Bazel build and return structured diagnostics.
 
     options are passed as extra bazel flags (e.g. --config=ci, -c opt).
     """
@@ -27,11 +28,11 @@ async def bazel_build(
     if options:
         cmd.extend(options)
     result = await run_bazel(cmd, timeout=timeout, check=False)
-    return (
-        f"Exit code: {result.return_code}\n"
-        f"Duration: {result.duration:.1f}s\n\n"
-        f"--- stdout ---\n{result.stdout}\n"
-        f"--- stderr ---\n{result.stderr}"
+    return parse_bazel_build_output(
+        result.stdout,
+        result.stderr,
+        result.return_code,
+        duration=result.duration,
     )
 
 
