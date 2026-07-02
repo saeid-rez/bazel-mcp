@@ -13,7 +13,7 @@ Repo: [github.com/saeid-rez/bazel-mcp](https://github.com/saeid-rez/bazel-mcp)
 | `get_deps` | Direct or transitive dependencies of a target |
 | `get_rdeps` | Reverse dependencies within a scope |
 | `show_target_info` | Rule definition via `query --output=build` |
-| `bazel_build` | Run `bazel build` |
+| `bazel_build` | Run `bazel build` with structured failure diagnostics |
 | `bazel_test` | Run `bazel test` with structured results |
 | `explain_build_file` | Read BUILD file contents for analysis |
 
