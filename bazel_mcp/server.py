@@ -12,6 +12,7 @@ mcp = FastMCP(
         "Use show_target_info for rule definitions (--output=build). "
         "Use bazel_build and bazel_test to run builds and tests. "
         "Use explain_build_file to read BUILD file contents for analysis. "
+        "Use find_affected_targets to find affected targets from git diff. "
         "Large //... queries can be slow; prefer scoped package patterns when possible."
     ),
 )
