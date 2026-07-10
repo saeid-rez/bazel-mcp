@@ -1,5 +1,7 @@
 """Bazel query MCP tools."""
 
+from pathlib import Path
+
 from bazel_mcp.bazel import normalize_query_pattern, run_bazel, validate_target_label
 from bazel_mcp.server import mcp
 
@@ -61,3 +63,77 @@ async def show_target_info(target: str) -> str:
     validate_target_label(target)
     result = await run_bazel(["query", "--output=build", target])
     return result.stdout
+
+
+def _file_to_bazel_label(file_path: str) -> str:
+    """Convert a file path to its Bazel package label.
+    
+    Example: src/lib/BUILD -> //src/lib
+             src/lib/foo.go -> //src/lib:foo.go
+    """
+    file_path = file_path.strip()
+    if not file_path:
+        return None
+    
+    path = Path(file_path)
+    name = path.name
+    
+    if name in ("BUILD", "BUILD.bazel"):
+        parent = path.parent
+        pkg = str(parent).replace("\\", "/")
+        if pkg == ".":
+            pkg = ""
+        return f"//{pkg}" if pkg else "//:"
+    
+    if name.endswith((".bazel", ".bzl")):
+        return None
+    
+    parent = path.parent
+    pkg = str(parent).replace("\\", "/")
+    if pkg == ".":
+        pkg = ""
+    
+    base = path.stem if path.suffix else path.name
+    
+    if not pkg:
+        return f"//:{base}"
+    return f"//{pkg}:{base}"
+
+
+@mcp.tool(annotations=_READ_ONLY)
+async def find_affected_targets(
+    changed_files: list[str],
+    scope: str = "//...",
+    target_kind: str | None = None,
+) -> str:
+    """Find all Bazel targets affected by a set of changed files.
+    
+    This is useful for CI optimization - only rebuild/test what's changed.
+    
+    Args:
+        changed_files: List of file paths (from git diff --name-only).
+        scope: Scope to search within (default: //...). Can be a package like //src/...
+        target_kind: Optional filter by target kind (e.g., 'cc_library', 'python_library', 'test').
+    """
+    if not changed_files:
+        return "No files provided."
+    
+    labels = []
+    for f in changed_files:
+        label = _file_to_bazel_label(f)
+        if label:
+            labels.append(label)
+    
+    if not labels:
+        return "No valid Bazel targets found in changed files."
+    
+    file_set = " ".join(labels)
+    scope_pattern = normalize_query_pattern(scope)
+    
+    query = f"rdeps({scope_pattern}, set({file_set}))"
+    
+    if target_kind:
+        query = f"kind('{target_kind}', {query})"
+    
+    result = await run_bazel(["query", query])
+    return result.stdout if result.stdout else "No affected targets found."
