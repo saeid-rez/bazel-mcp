@@ -1,6 +1,6 @@
 """FastMCP server instance and tool registration."""
 
-from mcp.server.fastmcp import FastMCP
+from fastmcp import FastMCP
 
 mcp = FastMCP(
     "bazel-mcp",
