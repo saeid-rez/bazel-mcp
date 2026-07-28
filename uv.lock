@@ -42,7 +42,7 @@ wheels = [
 ]
 
 [[package]]
-name = "bazel-mcp"
+name = "bazel-mcp-server"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
