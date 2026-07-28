@@ -20,20 +20,35 @@ Repo: [github.com/saeid-rez/bazel-mcp](https://github.com/saeid-rez/bazel-mcp)
 
 ## Usage
 
-Run against a Bazel workspace. Open that repo in Cursor, then add to `.cursor/mcp.json`:
+Requires [uv](https://docs.astral.sh/uv/). Run against a Bazel workspace. Open that repo in Cursor, then add to `.cursor/mcp.json`.
+
+### Option 1: Run via PyPI (Recommended)
 
 ```json
 {
   "mcpServers": {
     "bazel": {
       "command": "uvx",
-      "args": ["--from", "git+https://github.com/saeid-rez/bazel-mcp", "bazel-mcp"]
+      "args": ["bazel-mcp-server"]
     }
   }
 }
 ```
 
-Requires [uv](https://docs.astral.sh/uv/). Bazel commands run in your open workspace by default.
+### Option 2: Run directly from GitHub
+
+```json
+{
+  "mcpServers": {
+    "bazel": {
+      "command": "uvx",
+      "args": ["--from", "git+https://github.com/saeid-rez/bazel-mcp", "bazel-mcp-server"]
+    }
+  }
+}
+```
+
+Bazel commands run in your open workspace by default.
 
 If your MCP client does not start the server from the Bazel workspace, pass the workspace explicitly:
 
@@ -43,8 +58,6 @@ If your MCP client does not start the server from the Bazel workspace, pass the 
     "bazel": {
       "command": "uvx",
       "args": [
-        "--from",
-        "git+https://github.com/saeid-rez/bazel-mcp",
         "bazel-mcp",
         "--workspace-root",
         "/path/to/your/bazel/workspace"
@@ -57,7 +70,7 @@ If your MCP client does not start the server from the Bazel workspace, pass the 
 Other optional flags:
 
 ```bash
-bazel-mcp --bazel-path bazelisk --timeout 600 --max-output-chars 64000
+bazel-mcp-server --bazel-path bazelisk --timeout 600 --max-output-chars 64000
 ```
 
 ## Development
