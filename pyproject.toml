@@ -1,5 +1,5 @@
 [project]
-name = "bazel-mcp"
+name = "bazel-mcp-server"
 version = "0.1.0"
 description = "MCP server for Bazel: query targets, analyze deps, build, test, and read BUILD files"
 readme = "README.md"
@@ -9,7 +9,7 @@ dependencies = [
 ]
 
 [project.scripts]
-bazel-mcp = "bazel_mcp.cli:main"
+bazel-mcp-server = "bazel_mcp.cli:main"
 
 [build-system]
 requires = ["hatchling"]
