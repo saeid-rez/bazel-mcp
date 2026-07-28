@@ -49,7 +49,7 @@ def main(argv: list[str] | None = None) -> None:
     logging.basicConfig(level=logging_level, stream=sys.stderr)
     logging.getLogger("mcp").setLevel(logging_level)
     logging.getLogger("mcp.server.lowlevel.server").setLevel(logging_level)
-    logging.getLogger("mcp.server.fastmcp.server").setLevel(logging_level)
+    logging.getLogger("fastmcp.server").setLevel(logging_level)
 
     from bazel_mcp.settings import configure_settings
 

@@ -5,6 +5,7 @@ description = "MCP server for Bazel: query targets, analyze deps, build, test, a
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "fastmcp>=3.4.5",
     "mcp[cli]>=1.27.1",
 ]
 
