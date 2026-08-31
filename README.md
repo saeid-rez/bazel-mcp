@@ -20,22 +20,101 @@ Repo: [github.com/saeid-rez/bazel-mcp](https://github.com/saeid-rez/bazel-mcp)
 
 ## Usage
 
-Requires [uv](https://docs.astral.sh/uv/). Run against a Bazel workspace. Open that repo in Cursor, then add to `.cursor/mcp.json`.
+Requires [uv](https://docs.astral.sh/uv/). Configure the server with a Bazel workspace path if your MCP client does not start it from that workspace.
 
-### Option 1: Run via PyPI (Recommended)
+### OpenCode
+
+Add the following to `opencode.json` or `opencode.jsonc`. Replace `/path/to/your/bazel/workspace` with the absolute path to your Bazel workspace.
 
 ```json
 {
-  "mcpServers": {
+  "$schema": "https://opencode.ai/config.json",
+  "mcp": {
     "bazel": {
-      "command": "uvx",
-      "args": ["bazel-mcp-server"]
+      "type": "local",
+      "command": [
+        "uvx",
+        "--from",
+        "git+https://github.com/saeid-rez/bazel-mcp",
+        "bazel-mcp-server",
+        "--workspace-root",
+        "/path/to/your/bazel/workspace"
+      ],
+      "enabled": true
     }
   }
 }
 ```
 
-### Option 2: Run directly from GitHub
+### GitHub Copilot CLI
+
+Add the following to `~/.copilot/mcp-servers.json`. Replace `/path/to/your/bazel/workspace` with the absolute path to your Bazel workspace.
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "bazel": {
+        "command": "uvx",
+        "args": [
+          "--from",
+          "git+https://github.com/saeid-rez/bazel-mcp",
+          "bazel-mcp-server",
+          "--workspace-root",
+          "/path/to/your/bazel/workspace"
+        ],
+        "protocol": "stdio"
+      }
+    }
+  }
+}
+```
+
+Alternatively, run `/mcp add bazel` inside Copilot CLI and provide the same command and arguments.
+
+### Install With uv
+
+To install the server persistently instead of running it from GitHub, run:
+
+```bash
+uv tool install bazel-mcp-server
+```
+
+Then use the following installed-server configuration in place of the GitHub-based command above. Include `--workspace-root` and its path when the client does not start the server from the Bazel workspace.
+
+OpenCode:
+
+```json
+{
+  "mcp": {
+    "bazel": {
+      "type": "local",
+      "command": ["bazel-mcp-server", "--workspace-root", "/path/to/your/bazel/workspace"],
+      "enabled": true
+    }
+  }
+}
+```
+
+GitHub Copilot CLI:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "bazel": {
+        "command": "bazel-mcp-server",
+        "args": ["--workspace-root", "/path/to/your/bazel/workspace"],
+        "protocol": "stdio"
+      }
+    }
+  }
+}
+```
+
+### Cursor
+
+Add this to `.cursor/mcp.json` in the Bazel workspace.
 
 ```json
 {
@@ -50,7 +129,7 @@ Requires [uv](https://docs.astral.sh/uv/). Run against a Bazel workspace. Open t
 
 Bazel commands run in your open workspace by default.
 
-If your MCP client does not start the server from the Bazel workspace, pass the workspace explicitly:
+If Cursor does not start the server from the Bazel workspace, pass the workspace explicitly:
 
 ```json
 {
@@ -58,7 +137,7 @@ If your MCP client does not start the server from the Bazel workspace, pass the 
     "bazel": {
       "command": "uvx",
       "args": [
-        "bazel-mcp",
+        "bazel-mcp-server",
         "--workspace-root",
         "/path/to/your/bazel/workspace"
       ]
