@@ -2,8 +2,11 @@
 
 from fastmcp import FastMCP
 
+from bazel_mcp import __version__
+
 mcp = FastMCP(
     "bazel-mcp",
+    version=__version__,
     instructions=(
         "MCP server for interacting with the Bazel build system. "
         "Use bazel_query for arbitrary query expressions (e.g. kind('cc_library', //...)). "
