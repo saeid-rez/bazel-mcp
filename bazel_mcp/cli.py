@@ -6,9 +6,17 @@ import argparse
 import logging
 import sys
 
+from bazel_mcp import __version__
+
 
 def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="MCP server for Bazel workspaces")
+    parser.add_argument(
+        "--version",
+        "-V",
+        action="version",
+        version=f"%(prog)s {__version__}",
+    )
     parser.add_argument(
         "--workspace-root",
         "-w",
