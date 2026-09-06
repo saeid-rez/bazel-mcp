@@ -22,6 +22,44 @@ Repo: [github.com/saeid-rez/bazel-mcp](https://github.com/saeid-rez/bazel-mcp)
 
 Requires [uv](https://docs.astral.sh/uv/). Configure the server with a Bazel workspace path if your MCP client does not start it from that workspace.
 
+### Antigravity (agy)
+
+Add the following to `~/.gemini/config/mcp_config.json`:
+
+```json
+{
+  "mcpServers": {
+    "bazel": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/saeid-rez/bazel-mcp",
+        "bazel-mcp-server"
+      ]
+    }
+  }
+}
+```
+
+Bazel commands run in your active workspace by default. If Antigravity does not start the server from your Bazel workspace, pass `--workspace-root` explicitly:
+
+```json
+{
+  "mcpServers": {
+    "bazel": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/saeid-rez/bazel-mcp",
+        "bazel-mcp-server",
+        "--workspace-root",
+        "/path/to/your/bazel/workspace"
+      ]
+    }
+  }
+}
+```
+
 ### OpenCode
 
 Add the following to `opencode.json` or `opencode.jsonc`. Replace `/path/to/your/bazel/workspace` with the absolute path to your Bazel workspace.
@@ -81,6 +119,19 @@ uv tool install bazel-mcp-server
 ```
 
 Then use the following installed-server configuration in place of the GitHub-based command above. Include `--workspace-root` and its path when the client does not start the server from the Bazel workspace.
+
+Antigravity (agy):
+
+```json
+{
+  "mcpServers": {
+    "bazel": {
+      "command": "bazel-mcp-server",
+      "args": ["--workspace-root", "/path/to/your/bazel/workspace"]
+    }
+  }
+}
+```
 
 OpenCode:
 
