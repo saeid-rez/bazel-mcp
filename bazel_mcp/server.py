@@ -10,6 +10,8 @@ mcp = FastMCP(
     instructions=(
         "MCP server for interacting with the Bazel build system. "
         "Use bazel_query for arbitrary query expressions (e.g. kind('cc_library', //...)). "
+        "Use bazel_cquery for configured query expressions (post-analysis, select() resolution, platforms). "
+        "Use bazel_aquery for action graph inspection (compiler/linker commands, flags, inputs/outputs). "
         "Use list_targets to list targets in a package pattern. "
         "Use get_deps/get_rdeps for dependency analysis. "
         "Use show_target_info for rule definitions (--output=build). "

@@ -17,6 +17,12 @@ class BazelExecutionError(BazelMcpError):
         self.return_code = return_code
         self.stderr = stderr
 
+    def __str__(self) -> str:
+        base = super().__str__()
+        if self.stderr and self.stderr.strip():
+            return f"{base}\n{self.stderr.strip()}"
+        return base
+
 
 class WorkspaceNotFoundError(BazelMcpError):
     """No Bazel workspace marker found."""

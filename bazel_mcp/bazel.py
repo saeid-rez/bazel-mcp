@@ -44,6 +44,19 @@ def truncate_output(text: str, max_chars: int | None = None) -> str:
     )
 
 
+def truncate_output_bytes(text: str, max_bytes: int) -> str:
+    """Safely truncate text if its UTF-8 byte length exceeds max_bytes."""
+    raw_bytes = text.encode("utf-8")
+    if len(raw_bytes) <= max_bytes:
+        return text
+    truncated = raw_bytes[:max_bytes].decode("utf-8", errors="ignore")
+    last_newline = truncated.rfind("\n")
+    if last_newline >= 0:
+        truncated = truncated[:last_newline + 1]
+    warning = f"\n\n... [Output truncated: exceeded max_output_bytes ({len(raw_bytes)} > {max_bytes})] ..."
+    return truncated + warning
+
+
 def _has_workspace_marker(directory: Path) -> bool:
     return any((directory / marker).is_file() for marker in WORKSPACE_MARKERS)
 
@@ -129,6 +142,7 @@ async def run_bazel(
     *,
     timeout: int | None = None,
     check: bool = True,
+    max_chars: int | None = None,
 ) -> BazelResult:
     """Execute `bazel <args>` asynchronously in the workspace root."""
     settings = get_settings()
@@ -136,7 +150,7 @@ async def run_bazel(
     bazel = resolve_bazel_binary()
     cmd = [bazel, *args]
     effective_timeout = timeout if timeout is not None else settings.timeout
-    max_chars = settings.max_output_chars
+    effective_max_chars = max_chars if max_chars is not None else settings.max_output_chars
 
     async def _execute() -> BazelResult:
         start = time.monotonic()
@@ -164,8 +178,8 @@ async def run_bazel(
             ) from None
 
         duration = time.monotonic() - start
-        stdout = truncate_output(stdout_bytes.decode(errors="replace"), max_chars)
-        stderr = truncate_output(stderr_bytes.decode(errors="replace"), max_chars)
+        stdout = truncate_output(stdout_bytes.decode(errors="replace"), effective_max_chars)
+        stderr = truncate_output(stderr_bytes.decode(errors="replace"), effective_max_chars)
         return_code = proc.returncode or 0
 
         result = BazelResult(
