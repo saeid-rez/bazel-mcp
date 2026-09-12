@@ -9,6 +9,8 @@ Repo: [github.com/saeid-rez/bazel-mcp](https://github.com/saeid-rez/bazel-mcp)
 | Tool | Description |
 |------|-------------|
 | `bazel_query` | Run arbitrary `bazel query` expressions |
+| `bazel_cquery` | Run configured `bazel cquery` expressions (select() and platforms) |
+| `bazel_aquery` | Run action `bazel aquery` expressions (compiler flags, commands) |
 | `list_targets` | List targets in a package or subtree |
 | `get_deps` | Direct or transitive dependencies of a target |
 | `get_rdeps` | Reverse dependencies within a scope |

@@ -13,6 +13,7 @@ from bazel_mcp.bazel import (
     normalize_query_pattern,
     run_bazel,
     truncate_output,
+    truncate_output_bytes,
     validate_target_label,
 )
 from bazel_mcp.exceptions import BazelExecutionError, WorkspaceNotFoundError
@@ -62,6 +63,24 @@ class TestTruncateOutput:
         result = truncate_output(text, 40)
         assert "truncated" in result
         assert len(result) < 100
+
+
+class TestTruncateOutputBytes:
+    def test_no_truncation_under_limit(self):
+        text = "//pkg:target\n//pkg:other\n"
+        assert truncate_output_bytes(text, 100) == text
+
+    def test_truncation_over_limit_with_warning(self):
+        lines = [f"//pkg:target_{i}\n" for i in range(100)]
+        text = "".join(lines)
+        max_bytes = 100
+        result = truncate_output_bytes(text, max_bytes)
+        assert "Output truncated: exceeded max_output_bytes" in result
+        assert str(len(text.encode("utf-8"))) in result
+        assert str(max_bytes) in result
+        # Check that it kept whole lines
+        content_part = result.split("\n\n... [Output truncated")[0]
+        assert content_part.endswith("\n") or not content_part
 
 
 class TestFindWorkspaceRoot:

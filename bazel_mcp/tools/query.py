@@ -2,7 +2,12 @@
 
 from pathlib import Path
 
-from bazel_mcp.bazel import normalize_query_pattern, run_bazel, validate_target_label
+from bazel_mcp.bazel import (
+    normalize_query_pattern,
+    run_bazel,
+    truncate_output_bytes,
+    validate_target_label,
+)
 from bazel_mcp.server import mcp
 
 _READ_ONLY = {
@@ -22,6 +27,61 @@ async def bazel_query(query: str, output_format: str = "label") -> str:
     """
     result = await run_bazel(["query", f"--output={output_format}", query])
     return result.stdout
+
+
+@mcp.tool(annotations=_READ_ONLY)
+async def bazel_cquery(
+    query: str,
+    output_format: str = "label",
+    options: list[str] | None = None,
+    max_output_bytes: int = 65536,
+) -> str:
+    """Run a Bazel configured query (cquery) expression.
+
+    Evaluates targets after configuration evaluation, platform resolution,
+    and select() branch conditions.
+
+    Args:
+        query: Query expression (e.g. deps(//pkg:target) or //pkg:target).
+        output_format: Output format (label, label_kind, textproto, proto, jsonproto, etc.).
+        options: Optional Bazel flags (e.g. ['--config=ci', '--platforms=//platforms:linux']).
+        max_output_bytes: Maximum response size in bytes before safe truncation (default 65536).
+    """
+    cmd = ["cquery", f"--output={output_format}"]
+    if options:
+        cmd.extend(options)
+    cmd.append(query)
+    result = await run_bazel(cmd, max_chars=max_output_bytes * 2)
+    return truncate_output_bytes(result.stdout, max_output_bytes)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+async def bazel_aquery(
+    query: str,
+    output_format: str = "text",
+    options: list[str] | None = None,
+    max_output_bytes: int = 65536,
+) -> str:
+    """Run a Bazel action query (aquery) expression.
+
+    Inspects actions generated in the build graph including compiler/linker commands,
+    arguments, environment variables, inputs, and outputs.
+
+    Args:
+        query: Action query expression (e.g. mnemonic('CppCompile', //pkg:target)).
+        output_format: Output format (text, proto, textproto, jsonproto, etc.).
+        options: Optional Bazel flags (e.g. ['--include_artifacts=false']).
+        max_output_bytes: Maximum response size in bytes before safe truncation (default 65536).
+    """
+    cmd = ["aquery", f"--output={output_format}"]
+    if options:
+        cmd.extend(options)
+    cmd.append(query)
+    result = await run_bazel(cmd, max_chars=max_output_bytes * 2)
+    output = result.stdout
+    if not output.strip():
+        return f"No matching actions found for query: {query}"
+    return truncate_output_bytes(output, max_output_bytes)
 
 
 @mcp.tool(annotations=_READ_ONLY)
