@@ -18,6 +18,7 @@ Repo: [github.com/saeid-rez/bazel-mcp](https://github.com/saeid-rez/bazel-mcp)
 | `find_affected_targets` | Find targets affected by changed files |
 | `bazel_build` | Run `bazel build` with structured failure diagnostics |
 | `bazel_test` | Run `bazel test` with structured target and failed-case results |
+| `bazel_run` | Run `bazel run` with arguments, environment variables, and working directory controls |
 | `explain_build_file` | Read BUILD file contents for analysis |
 
 ## Usage

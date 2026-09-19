@@ -9,12 +9,14 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 
 from bazel_mcp.bazel import (
+    _needs_build_test_lock,
     find_workspace_root,
     normalize_query_pattern,
     run_bazel,
     truncate_output,
     truncate_output_bytes,
     validate_target_label,
+    validate_working_dir,
 )
 from bazel_mcp.exceptions import BazelExecutionError, WorkspaceNotFoundError
 from bazel_mcp.settings import configure_settings, reset_settings
@@ -52,6 +54,43 @@ class TestValidateTargetLabel:
     def test_invalid(self):
         with pytest.raises(ValueError, match="Invalid Bazel target"):
             validate_target_label("not-a-label")
+
+
+class TestValidateWorkingDir:
+    def test_default_none_returns_workspace(self, tmp_path: Path):
+        assert validate_working_dir(None, tmp_path) == tmp_path
+
+    def test_valid_relative_dir(self, tmp_path: Path):
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        assert validate_working_dir("sub", tmp_path) == sub
+
+    def test_valid_absolute_dir(self, tmp_path: Path):
+        sub = tmp_path / "sub"
+        sub.mkdir()
+        assert validate_working_dir(str(sub), tmp_path) == sub
+
+    def test_outside_workspace_raises(self, tmp_path: Path):
+        outside = tmp_path.parent
+        with pytest.raises(ValueError, match="outside the workspace root"):
+            validate_working_dir(str(outside), tmp_path)
+
+    def test_nonexistent_dir_raises(self, tmp_path: Path):
+        with pytest.raises(ValueError, match="does not exist or is not a directory"):
+            validate_working_dir("does_not_exist", tmp_path)
+
+
+class TestNeedsBuildTestLock:
+    def test_locks_build_test_run(self):
+        assert _needs_build_test_lock(["build", "//..."]) is True
+        assert _needs_build_test_lock(["test", "//..."]) is True
+        assert _needs_build_test_lock(["run", "//pkg:bin"]) is True
+
+    def test_does_not_lock_query(self):
+        assert _needs_build_test_lock(["query", "//..."]) is False
+        assert _needs_build_test_lock(["cquery", "//..."]) is False
+        assert _needs_build_test_lock(["aquery", "//..."]) is False
+        assert _needs_build_test_lock([]) is False
 
 
 class TestTruncateOutput:
