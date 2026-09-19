@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import shutil
 import time
@@ -133,8 +134,34 @@ def validate_target_label(target: str) -> None:
         )
 
 
+def validate_working_dir(working_dir: str | None, workspace_root: Path) -> Path:
+    """Validate that working_dir is safely contained within workspace_root and exists."""
+    if not working_dir:
+        return workspace_root
+
+    target_path = Path(working_dir)
+    if not target_path.is_absolute():
+        target_path = (workspace_root / target_path).resolve()
+    else:
+        target_path = target_path.resolve()
+
+    try:
+        target_path.relative_to(workspace_root.resolve())
+    except ValueError:
+        raise ValueError(
+            f"working_dir {working_dir!r} resolves to {target_path}, which is outside the workspace root {workspace_root}"
+        )
+
+    if not target_path.is_dir():
+        raise ValueError(
+            f"working_dir does not exist or is not a directory: {working_dir!r}"
+        )
+
+    return target_path
+
+
 def _needs_build_test_lock(args: list[str]) -> bool:
-    return bool(args) and args[0] in ("build", "test")
+    return bool(args) and args[0] in ("build", "test", "run")
 
 
 async def run_bazel(
@@ -143,20 +170,25 @@ async def run_bazel(
     timeout: int | None = None,
     check: bool = True,
     max_chars: int | None = None,
+    cwd: Path | str | None = None,
+    env: dict[str, str] | None = None,
 ) -> BazelResult:
-    """Execute `bazel <args>` asynchronously in the workspace root."""
+    """Execute `bazel <args>` asynchronously in the workspace root or specified cwd."""
     settings = get_settings()
     workspace = find_workspace_root()
+    effective_cwd = Path(cwd).resolve() if cwd is not None else workspace
     bazel = resolve_bazel_binary()
     cmd = [bazel, *args]
     effective_timeout = timeout if timeout is not None else settings.timeout
     effective_max_chars = max_chars if max_chars is not None else settings.max_output_chars
+    subprocess_env = {**os.environ, **env} if env is not None else None
 
     async def _execute() -> BazelResult:
         start = time.monotonic()
         proc = await asyncio.create_subprocess_exec(
             *cmd,
-            cwd=workspace,
+            cwd=effective_cwd,
+            env=subprocess_env,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

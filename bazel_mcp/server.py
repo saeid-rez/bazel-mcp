@@ -16,6 +16,7 @@ mcp = FastMCP(
         "Use get_deps/get_rdeps for dependency analysis. "
         "Use show_target_info for rule definitions (--output=build). "
         "Use bazel_build and bazel_test to run builds and tests. "
+        "Use bazel_run to execute runnable Bazel targets with arguments, environment variables, and working directory controls. "
         "Use explain_build_file to read BUILD file contents for analysis. "
         "Use find_affected_targets to find affected targets from git diff. "
         "Large //... queries can be slow; prefer scoped package patterns when possible."

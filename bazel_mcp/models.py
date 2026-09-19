@@ -53,3 +53,11 @@ class BazelTestResult(BaseModel):
     failed_cases: list[BazelTestCaseFailure] = Field(default_factory=list)
     stdout: str = ""
     stderr: str = ""
+
+
+class BazelRunResult(BaseModel):
+    success: bool
+    exit_code: int
+    duration: float
+    stdout: str = ""
+    stderr: str = ""
