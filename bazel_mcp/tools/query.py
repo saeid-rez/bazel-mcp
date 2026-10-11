@@ -1,5 +1,7 @@
 """Bazel query MCP tools."""
 
+import re
+from collections import defaultdict
 from pathlib import Path
 
 from bazel_mcp.bazel import (
@@ -112,6 +114,99 @@ async def get_rdeps(target: str, scope: str = "//...") -> str:
     scope_pattern = normalize_query_pattern(scope)
     result = await run_bazel(["query", f"rdeps({scope_pattern}, {target}) except {target}"])
     return result.stdout
+
+
+_DOT_EDGE_PATTERN = re.compile(r'"([^"]+)"\s*->\s*"([^"]+)"')
+
+
+def _parse_dot_edges(dot_text: str) -> list[tuple[str, str]]:
+    """Extract directed edges (u, v) from Graphviz DOT output."""
+    return _DOT_EDGE_PATTERN.findall(dot_text)
+
+
+@mcp.tool(annotations=_READ_ONLY)
+async def get_dependency_path(
+    source: str,
+    target: str,
+    all_paths: bool = False,
+    max_depth: int | None = None,
+) -> str:
+    """Trace dependency chains connecting two targets using somepath or allpaths.
+
+    Finds and displays the dependency path(s) between a source target and a target target.
+    Useful for diagnosing dependency cycles and unexpected transitive links.
+
+    Args:
+        source: Starting target label (e.g. '//pkg:a').
+        target: Destination target label (e.g. '//pkg:b').
+        all_paths: If False, returns a single ordered path via 'somepath'.
+                   If True, returns all connecting paths via 'allpaths'.
+        max_depth: Optional maximum path depth (number of dependency hops).
+                   Paths longer than max_depth are omitted.
+    """
+    validate_target_label(source)
+    validate_target_label(target)
+
+    if max_depth is not None and max_depth < 0:
+        raise ValueError(f"max_depth must be non-negative, got {max_depth}")
+
+    source = source.strip()
+    target = target.strip()
+
+    if not all_paths:
+        result = await run_bazel(["query", f"somepath({source}, {target})"])
+        nodes = [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+        if not nodes:
+            return f"No path found between {source} and {target}."
+
+        depth = len(nodes) - 1
+        if max_depth is not None and depth > max_depth:
+            return f"No path found between {source} and {target} within max_depth {max_depth}."
+
+        return " -> ".join(nodes)
+
+    # all_paths is True
+    result = await run_bazel(["query", "--output=graph", f"allpaths({source}, {target})"])
+    output = result.stdout
+
+    if source == target:
+        if source in output:
+            return source
+        return f"No path found between {source} and {target}."
+
+    edges = _parse_dot_edges(output)
+    if not edges:
+        return f"No path found between {source} and {target}."
+
+    adj: dict[str, list[str]] = defaultdict(list)
+    for u, v in edges:
+        if v not in adj[u]:
+            adj[u].append(v)
+
+    paths: list[list[str]] = []
+
+    def _dfs(current: str, current_path: list[str]) -> None:
+        if max_depth is not None and (len(current_path) - 1) > max_depth:
+            return
+        if current == target:
+            paths.append(list(current_path))
+            return
+        for neighbor in adj.get(current, []):
+            if neighbor not in current_path:
+                current_path.append(neighbor)
+                _dfs(neighbor, current_path)
+                current_path.pop()
+
+    _dfs(source, [source])
+
+    if not paths:
+        if max_depth is not None:
+            return f"No path found between {source} and {target} within max_depth {max_depth}."
+        return f"No path found between {source} and {target}."
+
+    paths.sort(key=lambda p: (len(p), p))
+    return "\n".join(" -> ".join(p) for p in paths)
 
 
 @mcp.tool(annotations=_READ_ONLY)
