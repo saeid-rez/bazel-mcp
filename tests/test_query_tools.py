@@ -265,3 +265,213 @@ async def test_bazel_aquery_error():
 def test_cquery_and_aquery_annotations():
     assert query_tools._READ_ONLY["readOnlyHint"] is True
     assert query_tools._READ_ONLY["idempotentHint"] is True
+
+
+# --- Tests for Story 1.4: get_dependency_path ---
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_single_path_basic():
+    stdout = "//pkg:a\n//pkg:mid\n//pkg:b\n"
+    run_bazel = AsyncMock(
+        return_value=BazelResult(stdout=stdout, stderr="", return_code=0, duration=0.2)
+    )
+
+    with patch.object(query_tools, "run_bazel", run_bazel):
+        result = await query_tools.get_dependency_path(source="//pkg:a", target="//pkg:b")
+
+    assert result == "//pkg:a -> //pkg:mid -> //pkg:b"
+    run_bazel.assert_awaited_once_with(["query", "somepath(//pkg:a, //pkg:b)"])
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_single_path_within_max_depth():
+    stdout = "//pkg:a\n//pkg:mid\n//pkg:b\n"
+    run_bazel = AsyncMock(
+        return_value=BazelResult(stdout=stdout, stderr="", return_code=0, duration=0.2)
+    )
+
+    with patch.object(query_tools, "run_bazel", run_bazel):
+        result = await query_tools.get_dependency_path(
+            source="//pkg:a", target="//pkg:b", max_depth=2
+        )
+
+    assert result == "//pkg:a -> //pkg:mid -> //pkg:b"
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_single_path_exceeds_max_depth():
+    stdout = "//pkg:a\n//pkg:mid\n//pkg:b\n"
+    run_bazel = AsyncMock(
+        return_value=BazelResult(stdout=stdout, stderr="", return_code=0, duration=0.2)
+    )
+
+    with patch.object(query_tools, "run_bazel", run_bazel):
+        result = await query_tools.get_dependency_path(
+            source="//pkg:a", target="//pkg:b", max_depth=1
+        )
+
+    assert result == "No path found between //pkg:a and //pkg:b within max_depth 1."
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_single_path_not_found():
+    run_bazel = AsyncMock(
+        return_value=BazelResult(stdout="", stderr="Empty query results", return_code=0, duration=0.1)
+    )
+
+    with patch.object(query_tools, "run_bazel", run_bazel):
+        result = await query_tools.get_dependency_path(source="//pkg:a", target="//pkg:b")
+
+    assert result == "No path found between //pkg:a and //pkg:b."
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_all_paths_basic():
+    dot_output = """digraph mygraph {
+  node [shape=box];
+  "//pkg:a"
+  "//pkg:b"
+  "//pkg:a" -> "//pkg:mid1"
+  "//pkg:mid1" -> "//pkg:b"
+  "//pkg:a" -> "//pkg:mid2"
+  "//pkg:mid2" -> "//pkg:b"
+}
+"""
+    run_bazel = AsyncMock(
+        return_value=BazelResult(stdout=dot_output, stderr="", return_code=0, duration=0.3)
+    )
+
+    with patch.object(query_tools, "run_bazel", run_bazel):
+        result = await query_tools.get_dependency_path(
+            source="//pkg:a", target="//pkg:b", all_paths=True
+        )
+
+    expected = "//pkg:a -> //pkg:mid1 -> //pkg:b\n//pkg:a -> //pkg:mid2 -> //pkg:b"
+    assert result == expected
+    run_bazel.assert_awaited_once_with(["query", "--output=graph", "allpaths(//pkg:a, //pkg:b)"])
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_all_paths_with_max_depth():
+    dot_output = """digraph mygraph {
+  "//pkg:a" -> "//pkg:b"
+  "//pkg:a" -> "//pkg:mid"
+  "//pkg:mid" -> "//pkg:b"
+}
+"""
+    run_bazel = AsyncMock(
+        return_value=BazelResult(stdout=dot_output, stderr="", return_code=0, duration=0.3)
+    )
+
+    with patch.object(query_tools, "run_bazel", run_bazel):
+        # max_depth=1 should only include the direct path (1 hop)
+        result_depth1 = await query_tools.get_dependency_path(
+            source="//pkg:a", target="//pkg:b", all_paths=True, max_depth=1
+        )
+        assert result_depth1 == "//pkg:a -> //pkg:b"
+
+        # max_depth=2 includes both direct (1 hop) and indirect (2 hops)
+        result_depth2 = await query_tools.get_dependency_path(
+            source="//pkg:a", target="//pkg:b", all_paths=True, max_depth=2
+        )
+        assert result_depth2 == "//pkg:a -> //pkg:b\n//pkg:a -> //pkg:mid -> //pkg:b"
+
+        # max_depth=0 finds no paths
+        result_depth0 = await query_tools.get_dependency_path(
+            source="//pkg:a", target="//pkg:b", all_paths=True, max_depth=0
+        )
+        assert result_depth0 == "No path found between //pkg:a and //pkg:b within max_depth 0."
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_all_paths_cycle_safety():
+    dot_output = """digraph mygraph {
+  "//pkg:a" -> "//pkg:b"
+  "//pkg:b" -> "//pkg:c"
+  "//pkg:c" -> "//pkg:a"
+  "//pkg:b" -> "//pkg:d"
+}
+"""
+    run_bazel = AsyncMock(
+        return_value=BazelResult(stdout=dot_output, stderr="", return_code=0, duration=0.2)
+    )
+
+    with patch.object(query_tools, "run_bazel", run_bazel):
+        result = await query_tools.get_dependency_path(
+            source="//pkg:a", target="//pkg:d", all_paths=True
+        )
+
+    assert result == "//pkg:a -> //pkg:b -> //pkg:d"
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_all_paths_not_found():
+    dot_output = """digraph mygraph {
+  node [shape=box];
+}
+"""
+    run_bazel = AsyncMock(
+        return_value=BazelResult(stdout=dot_output, stderr="", return_code=0, duration=0.1)
+    )
+
+    with patch.object(query_tools, "run_bazel", run_bazel):
+        result = await query_tools.get_dependency_path(
+            source="//pkg:a", target="//pkg:b", all_paths=True
+        )
+
+    assert result == "No path found between //pkg:a and //pkg:b."
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_same_source_and_target():
+    # Single path mode
+    run_bazel_single = AsyncMock(
+        return_value=BazelResult(stdout="//pkg:a\n", stderr="", return_code=0, duration=0.1)
+    )
+    with patch.object(query_tools, "run_bazel", run_bazel_single):
+        result = await query_tools.get_dependency_path(source="//pkg:a", target="//pkg:a")
+    assert result == "//pkg:a"
+
+    # All paths mode
+    run_bazel_all = AsyncMock(
+        return_value=BazelResult(stdout='digraph mygraph {\n  "//pkg:a"\n}\n', stderr="", return_code=0, duration=0.1)
+    )
+    with patch.object(query_tools, "run_bazel", run_bazel_all):
+        result = await query_tools.get_dependency_path(source="//pkg:a", target="//pkg:a", all_paths=True)
+    assert result == "//pkg:a"
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_invalid_labels():
+    with pytest.raises(ValueError, match="Invalid Bazel target label"):
+        await query_tools.get_dependency_path(source="invalid_source", target="//pkg:b")
+
+    with pytest.raises(ValueError, match="Invalid Bazel target label"):
+        await query_tools.get_dependency_path(source="//pkg:a", target="invalid_target")
+
+    with pytest.raises(ValueError, match="max_depth must be non-negative"):
+        await query_tools.get_dependency_path(source="//pkg:a", target="//pkg:b", max_depth=-1)
+
+
+@pytest.mark.asyncio
+async def test_get_dependency_path_execution_error():
+    from bazel_mcp.exceptions import BazelExecutionError, BazelMcpError
+
+    run_bazel = AsyncMock(
+        side_effect=BazelExecutionError(
+            "Bazel command failed (exit 7): bazel query somepath(//pkg:a, //pkg:missing)",
+            return_code=7,
+            stderr="ERROR: target '//pkg:missing' not found",
+        )
+    )
+
+    with (
+        patch.object(query_tools, "run_bazel", run_bazel),
+        pytest.raises(BazelMcpError) as exc_info,
+    ):
+        await query_tools.get_dependency_path(source="//pkg:a", target="//pkg:missing")
+
+    assert exc_info.value.return_code == 7
+    assert "target '//pkg:missing' not found" in str(exc_info.value)
+

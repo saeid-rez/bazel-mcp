@@ -14,6 +14,7 @@ Repo: [github.com/saeid-rez/bazel-mcp](https://github.com/saeid-rez/bazel-mcp)
 | `list_targets` | List targets in a package or subtree |
 | `get_deps` | Direct or transitive dependencies of a target |
 | `get_rdeps` | Reverse dependencies within a scope |
+| `get_dependency_path` | Trace dependency chains (`somepath`/`allpaths`) between targets |
 | `show_target_info` | Rule definition via `query --output=build` |
 | `find_affected_targets` | Find targets affected by changed files |
 | `bazel_build` | Run `bazel build` with structured failure diagnostics |

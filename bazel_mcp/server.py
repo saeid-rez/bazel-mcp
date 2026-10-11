@@ -14,6 +14,7 @@ mcp = FastMCP(
         "Use bazel_aquery for action graph inspection (compiler/linker commands, flags, inputs/outputs). "
         "Use list_targets to list targets in a package pattern. "
         "Use get_deps/get_rdeps for dependency analysis. "
+        "Use get_dependency_path to trace dependency chains (somepath/allpaths) between two targets. "
         "Use show_target_info for rule definitions (--output=build). "
         "Use bazel_build and bazel_test to run builds and tests. "
         "Use bazel_run to execute runnable Bazel targets with arguments, environment variables, and working directory controls. "
