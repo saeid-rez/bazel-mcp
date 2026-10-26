@@ -36,6 +36,61 @@ async def test_bazel_build_returns_structured_diagnostics():
     assert result.duration_seconds == 2.5
     assert result.errors[0].file == "/repo/src/App.swift"
     assert result.errors[0].message == "cannot find type 'Foo' in scope"
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+@pytest.mark.asyncio
+async def test_bazel_build_verbose():
+    stderr = "/repo/src/App.swift:34:12: error: cannot find type 'Foo' in scope\n"
+    run_bazel = AsyncMock(
+        return_value=BazelResult(
+            stdout="some build stdout",
+            stderr=stderr,
+            return_code=1,
+            duration=2.5,
+        )
+    )
+
+    with patch.object(build_tools, "run_bazel", run_bazel):
+        result = await build_tools.bazel_build(
+            ["//app:app"],
+            verbose=True,
+        )
+
+    assert result.success is False
+    assert result.stdout == "some build stdout"
+    assert result.stderr == stderr
+
+
+@pytest.mark.asyncio
+async def test_bazel_test_basic_and_verbose(tmp_path):
+    output = """
+//foo:bar_test PASSED in 1.0s
+Executed 1 out of 1 test: 1 passes.
+"""
+    run_bazel = AsyncMock(
+        return_value=BazelResult(
+            stdout=output,
+            stderr="INFO: Test passed",
+            return_code=0,
+            duration=1.0,
+        )
+    )
+
+    with patch.object(build_tools, "find_workspace_root", return_value=tmp_path):
+        with patch.object(build_tools, "run_bazel", run_bazel):
+            # Default: omits raw streams on success
+            res_default = await build_tools.bazel_test(["//foo:bar_test"])
+            assert res_default.success is True
+            assert res_default.stdout == ""
+            assert res_default.stderr == ""
+
+            # Verbose: retains raw streams
+            res_verbose = await build_tools.bazel_test(["//foo:bar_test"], verbose=True)
+            assert res_verbose.success is True
+            assert res_verbose.stdout == output
+            assert res_verbose.stderr == "INFO: Test passed"
 
 
 @pytest.mark.asyncio

@@ -24,10 +24,14 @@ async def bazel_build(
     targets: list[str],
     options: list[str] | None = None,
     timeout: int | None = None,
+    verbose: bool = False,
 ) -> BazelBuildResult:
     """Run a Bazel build and return structured diagnostics.
 
     options are passed as extra bazel flags (e.g. --config=ci, -c opt).
+    verbose: When False (default), stdout and stderr are omitted on success or when
+        structured diagnostics are available, saving context tokens. When True, full
+        stdout and stderr are always returned.
     """
     cmd = ["build", *targets]
     if options:
@@ -38,6 +42,7 @@ async def bazel_build(
         result.stderr,
         result.return_code,
         duration=result.duration,
+        verbose=verbose,
     )
 
 
@@ -46,8 +51,15 @@ async def bazel_test(
     targets: list[str],
     options: list[str] | None = None,
     timeout: int | None = None,
+    verbose: bool = False,
 ) -> BazelTestResult:
-    """Run Bazel tests and return structured pass/fail results with failure log excerpts."""
+    """Run Bazel tests and return structured pass/fail results with failure log excerpts.
+
+    options are passed as extra bazel flags (e.g. --config=ci, -c opt).
+    verbose: When False (default), stdout and stderr are omitted on success or when
+        actionable failure details are parsed, saving context tokens. When True, full
+        stdout and stderr are always returned.
+    """
     cmd = ["test", *targets, "--test_output=errors"]
     if options:
         cmd.extend(options)
@@ -58,6 +70,7 @@ async def bazel_test(
         result.stderr,
         result.return_code,
         workspace=workspace,
+        verbose=verbose,
     )
 
 
