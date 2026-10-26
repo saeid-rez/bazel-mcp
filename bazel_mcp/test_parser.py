@@ -138,6 +138,7 @@ def parse_bazel_test_output(
     return_code: int,
     *,
     workspace: Path | None = None,
+    verbose: bool = False,
 ) -> BazelTestResult:
     combined = stdout + "\n" + stderr
     targets: list[BazelTestTargetResult] = []
@@ -190,6 +191,19 @@ def parse_bazel_test_output(
     if not targets:
         summary = "No per-target summary lines parsed; see raw output."
 
+    if verbose:
+        effective_stdout = stdout
+        effective_stderr = stderr
+    elif return_code == 0:
+        effective_stdout = ""
+        effective_stderr = ""
+    elif failed_cases or any(t.log_excerpt for t in targets):
+        effective_stdout = ""
+        effective_stderr = ""
+    else:
+        effective_stdout = stdout
+        effective_stderr = stderr
+
     return BazelTestResult(
         success=return_code == 0,
         exit_code=return_code,
@@ -199,6 +213,6 @@ def parse_bazel_test_output(
         summary=summary,
         targets=targets,
         failed_cases=failed_cases,
-        stdout=stdout,
-        stderr=stderr,
+        stdout=effective_stdout,
+        stderr=effective_stderr,
     )

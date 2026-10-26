@@ -101,3 +101,50 @@ MyTests.swift:45: XCTAssertEqual failed: ("3") is not equal to ("4")
     assert result.failed_cases[0].file == "MyTests.swift"
     assert result.failed_cases[0].line == 45
     assert result.failed_cases[0].message == 'XCTAssertEqual failed: ("3") is not equal to ("4")'
+
+
+def test_parse_test_success_omits_raw_streams_by_default():
+    output = """
+//foo:bar_test                                                   PASSED in 1.2s
+Executed 1 out of 1 test: 1 passes.
+"""
+    result = parse_bazel_test_output(output, "INFO: Elapsed time: 1.5s", return_code=0)
+    assert result.success is True
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+def test_parse_test_failure_with_details_omits_raw_streams_by_default():
+    output = """
+//app:tests FAILED in 1.0s
+FAIL: testLoginFlow (MyAppTests)
+"""
+    result = parse_bazel_test_output(output, "some stderr", return_code=1)
+    assert result.success is False
+    assert len(result.failed_cases) == 1
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+def test_parse_test_failure_without_details_retains_raw_streams_as_fallback():
+    # Failure where test runner crashed without test.log or parseable FAIL lines
+    output = "Test runner terminated abruptly with signal 9"
+    stderr = "FATAL: Test runner crashed"
+    result = parse_bazel_test_output(output, stderr, return_code=1)
+    assert result.success is False
+    assert len(result.failed_cases) == 0
+    assert result.stdout == output
+    assert result.stderr == stderr
+
+
+def test_parse_test_verbose_always_retains_raw_streams():
+    output = "//foo:bar_test PASSED in 0.5s"
+    stderr = "INFO: Test passed"
+    res_success = parse_bazel_test_output(output, stderr, return_code=0, verbose=True)
+    assert res_success.stdout == output
+    assert res_success.stderr == stderr
+
+    output_fail = "//app:tests FAILED in 1.0s\nFAIL: testA (Suite)"
+    res_fail = parse_bazel_test_output(output_fail, "err", return_code=1, verbose=True)
+    assert res_fail.stdout == output_fail
+    assert res_fail.stderr == "err"

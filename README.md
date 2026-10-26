@@ -17,8 +17,8 @@ Repo: [github.com/saeid-rez/bazel-mcp](https://github.com/saeid-rez/bazel-mcp)
 | `get_dependency_path` | Trace dependency chains (`somepath`/`allpaths`) between targets |
 | `show_target_info` | Rule definition via `query --output=build` |
 | `find_affected_targets` | Find targets affected by changed files |
-| `bazel_build` | Run `bazel build` with structured failure diagnostics |
-| `bazel_test` | Run `bazel test` with structured target and failed-case results |
+| `bazel_build` | Run `bazel build` with structured failure diagnostics (omits raw logs by default to save tokens; use `verbose=True` for full logs) |
+| `bazel_test` | Run `bazel test` with structured target and failed-case results (omits raw logs by default to save tokens; use `verbose=True` for full logs) |
 | `bazel_run` | Run `bazel run` with arguments, environment variables, and working directory controls |
 | `explain_build_file` | Read BUILD file contents for analysis |
 

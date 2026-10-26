@@ -76,3 +76,50 @@ def test_caps_errors_and_warnings():
     assert len(result.warnings) == 20
     assert result.errors[0].message == "failure 0"
     assert result.warnings[0].message == "warning 0"
+
+
+def test_parse_success_omits_raw_streams_by_default():
+    result = parse_bazel_build_output(
+        stdout="INFO: Build completed successfully\n",
+        stderr="INFO: 4 processes: 4 internal.\n",
+        return_code=0,
+    )
+    assert result.success is True
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+def test_parse_failure_with_diagnostics_omits_raw_streams_by_default():
+    stderr = """
+/repo/src/App.swift:34:12: error: cannot find type 'Foo' in scope
+FAILED: Build did NOT complete successfully
+"""
+    result = parse_bazel_build_output("build stdout log", stderr, return_code=1)
+    assert result.success is False
+    assert len(result.errors) == 1
+    assert result.stdout == ""
+    assert result.stderr == ""
+
+
+def test_parse_failure_without_diagnostics_retains_raw_streams_as_fallback():
+    stderr = "ld: symbol(s) not found for architecture arm64\nclang: error: linker command failed with exit code 1"
+    stdout = "Analyzing //app:app..."
+    result = parse_bazel_build_output(stdout, stderr, return_code=1)
+    assert result.success is False
+    assert len(result.errors) == 0
+    assert result.stdout == stdout
+    assert result.stderr == stderr
+
+
+def test_parse_verbose_always_retains_raw_streams():
+    # Verbose on success
+    res_success = parse_bazel_build_output("out_ok", "err_ok", return_code=0, verbose=True)
+    assert res_success.stdout == "out_ok"
+    assert res_success.stderr == "err_ok"
+
+    # Verbose on failure with parsed diagnostics
+    stderr = "/repo/file.cc:1:1: error: boom\nFAILED: Build did NOT complete successfully"
+    res_fail = parse_bazel_build_output("out_fail", stderr, return_code=1, verbose=True)
+    assert len(res_fail.errors) == 1
+    assert res_fail.stdout == "out_fail"
+    assert res_fail.stderr == stderr

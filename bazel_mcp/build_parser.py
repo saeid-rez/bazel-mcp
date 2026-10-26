@@ -63,6 +63,7 @@ def parse_bazel_build_output(
     return_code: int,
     *,
     duration: float = 0.0,
+    verbose: bool = False,
 ) -> BazelBuildResult:
     """Parse Bazel build output into a structured result."""
     combined = stderr + "\n" + stdout
@@ -122,6 +123,19 @@ def parse_bazel_build_output(
     else:
         summary = "Build failed."
 
+    if verbose:
+        effective_stdout = stdout
+        effective_stderr = stderr
+    elif return_code == 0:
+        effective_stdout = ""
+        effective_stderr = ""
+    elif errors:
+        effective_stdout = ""
+        effective_stderr = ""
+    else:
+        effective_stdout = stdout
+        effective_stderr = stderr
+
     return BazelBuildResult(
         success=return_code == 0,
         exit_code=return_code,
@@ -130,6 +144,6 @@ def parse_bazel_build_output(
         failed_targets=failed_targets,
         errors=errors[:_MAX_ERRORS],
         warnings=warnings[:_MAX_WARNINGS],
-        stdout=stdout,
-        stderr=stderr,
+        stdout=effective_stdout,
+        stderr=effective_stderr,
     )
